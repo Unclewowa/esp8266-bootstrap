@@ -19,10 +19,24 @@ s:listen(80, function(c)
   local DataToGet = 0
 
   c:on("receive", function(c, req)
-    -- print(req)
+    --print(req)
+	if req:find("Content%-Length:") or bBodyMissing then
+      if fullPayload then fullPayload = fullPayload .. req else fullPayload = req end
+      if (tonumber(string.match(fullPayload, "%d+", fullPayload:find("Content%-Length:")+16)) > #fullPayload:sub(fullPayload:find("\r\n\r\n", 1, true)+4, #fullPayload)) then
+        bBodyMissing = true
+        return
+      else
+        --print("HTTP packet assembled! size: "..#fullPayload)
+        req = fullPayload
+        fullPayload, bBodyMissing = nil
+      end
+    end
+    collectgarbage()
+	
     res = r:dispatch(req)
     c:send(res.header)
   end)
+
 
   c:on("sent", function(c)
     if res.body then
